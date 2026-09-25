@@ -28,7 +28,7 @@ VPS compartido con Antitropic Cards y Skully Survivors. SkullyStore usa su propi
    docker compose -f docker-compose.prod.yml build migrate
    docker compose -f docker-compose.prod.yml run --rm migrate npx prisma migrate deploy
    ```
-   Opcional — sembrar categorías/productos de ejemplo o crear el primer usuario admin a mano (mejor no reutilizar las contraseñas de ejemplo del seed de desarrollo en producción):
+   Opcional — sembrar categorías/productos de ejemplo. El seed **solo crea un admin** si pasas `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (mínimo 12 caracteres, única); sin ellas no crea ninguno:
    ```bash
    docker compose -f docker-compose.prod.yml run --rm migrate npx prisma db seed
    ```
