@@ -1,6 +1,6 @@
 # SkullyStore
 
-> 🟢 **Live in production:** [store.bskully.es](https://store.bskully.es) · Custom e-commerce built end-to-end by [Juan Dalebrook](https://github.com/jdalebrook): Next.js 16 · TypeScript · Prisma · PostgreSQL · Auth.js · PayPal · Docker
+> 🟢 **Live in production:** [store.bskully.es](https://store.bskully.es) · Custom e-commerce designed and shipped by [Juan Dalebrook](https://github.com/jdalebrook) with AI coding agents: Next.js 16 · TypeScript · Prisma · PostgreSQL · Auth.js · PayPal · Docker
 
 Tienda online a medida (sin Prestashop/Shopify), pensada para poco tráfico pero con mucho cuidado visual por producto. Construida con Next.js (App Router) + TypeScript, PostgreSQL/Prisma, Auth.js y PayPal.
 
