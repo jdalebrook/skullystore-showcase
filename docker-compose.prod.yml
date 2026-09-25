@@ -1,0 +1,76 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skullystore
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: skullystore
+    volumes:
+      - skullystore_pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://skullystore:${DB_PASSWORD}@db:5432/skullystore?schema=public
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
+      AUTH_URL: ${AUTH_URL}
+      PAYPAL_API_BASE: ${PAYPAL_API_BASE}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID}
+      NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      ADMIN_NOTIFICATION_EMAIL: ${ADMIN_NOTIFICATION_EMAIL}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET}
+    # Solo accesible en localhost: nginx en el host hace de reverse proxy,
+    # el contenedor no se expone directamente a Internet.
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      # Imágenes de producto subidas desde el admin -- en un volumen aparte
+      # para que sobrevivan a "docker compose up --build" en cada deploy
+      # (la imagen "app" se reconstruye entera cada vez).
+      - skullystore_uploads:/app/uploads
+    networks:
+      - internal
+
+  # No se levanta con "up": la imagen "runner" final es mínima y no trae el
+  # CLI de Prisma. Este servicio usa la etapa "builder" (node_modules
+  # completo) solo para tareas puntuales -- ej.:
+  #   docker compose -f docker-compose.prod.yml run --rm migrate npx prisma migrate deploy
+  #   docker compose -f docker-compose.prod.yml run --rm migrate npx prisma db seed
+  migrate:
+    build:
+      context: .
+      target: builder
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: postgresql://skullystore:${DB_PASSWORD}@db:5432/skullystore?schema=public
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  skullystore_pgdata:
+  skullystore_uploads:

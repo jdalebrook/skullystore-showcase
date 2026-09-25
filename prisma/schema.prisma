@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  // Null para cuentas creadas solo por Google -- no pueden entrar por
+  // Credentials hasta que fijen una contraseña (ver authorize() en auth.ts).
+  passwordHash        String?
+  name                String?
+  role                Role                 @default(CUSTOMER)
+  addresses           Address[]
+  cart                Cart?
+  orders              Order[]
+  passwordResetTokens PasswordResetToken[]
+  productLikes        ProductLike[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?
+  fullName   String
+  line1      String
+  line2      String?
+  city       String
+  province   String?
+  postalCode String
+  country    String   @default("ES")
+  phone      String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  description String?
+  imageUrl    String?
+  sortOrder   Int        @default(0)
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+}
+
+model Product {
+  id                        String                     @id @default(cuid())
+  slug                      String                     @unique
+  name                      String
+  shortDesc                 String?
+  description               String?
+  // priceCents es el precio final que ve y paga el cliente -- impuestos y
+  // gastos de envío incluidos, no se suma nada más en el checkout.
+  priceCents                Int
+  // Desglose informativo de priceCents, opcional y editable a mano por
+  // producto -- no se usa en ningún cálculo del checkout, es solo para que
+  // el admin sepa cuánto del precio final es IVA y cuánto es envío.
+  vatCents                  Int?
+  shippingCostCents         Int?
+  currency                  String                     @default("EUR")
+  stock                     Int                        @default(0)
+  isActive                  Boolean                    @default(true)
+  categoryId                String
+  category                  Category                   @relation(fields: [categoryId], references: [id])
+  images                    ProductImage[]
+  accentColor               String?
+  layoutVariant             String                     @default("default")
+  badgeText                 String?
+  // Opcionales, de cara a calcular gastos de envío por peso/dimensiones más
+  // adelante -- todavía no se usan en ningún cálculo, solo se guardan.
+  weightGrams               Int?
+  lengthCm                  Int?
+  widthCm                   Int?
+  heightCm                  Int?
+  cartItems                 CartItem[]
+  orderItems                OrderItem[]
+  likes                     ProductLike[]
+  stockNotificationRequests StockNotificationRequest[]
+  sortOrder                 Int                        @default(0)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+}
+
+// Petición de "avísame cuando repongáis" en un producto sin stock. No exige
+// cuenta (a diferencia de ProductLike) para no poner fricción a alguien que
+// solo quiere dejar su email -- el email va directo al admin, no se usa para
+// nada más. @@unique evita reavisar al admin si la misma persona repite el
+// envío para el mismo producto.
+model StockNotificationRequest {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([productId, email])
+}
+
+model ProductLike {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  // Null hasta que scripts/send-like-reminders.ts manda el recordatorio de
+  // "sigue disponible" -- evita reavisar dos veces por el mismo like. Se
+  // borra solo si el like se quita y se vuelve a dar (@@unique + delete en
+  // toggleLike), así que un nuevo like siempre puede recibir su propio aviso.
+  reminderSentAt DateTime?
+
+  @@unique([userId, productId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  // A diferencia de OrderItem, un CartItem no tiene valor histórico -- si se
+  // borra el producto, que desaparezca también de cualquier carrito.
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(PENDING)
+  items           OrderItem[]
+  addressSnapshot Json
+  subtotalCents   Int
+  totalCents      Int
+  currency        String      @default("EUR")
+  payment         Payment?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id])
+  nameSnapshot   String
+  unitPriceCents Int
+  quantity       Int
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  order           Order    @relation(fields: [orderId], references: [id])
+  paypalOrderId   String   @unique
+  paypalCaptureId String?
+  status          String
+  rawPayload      Json?
+  createdAt       DateTime @default(now())
+}

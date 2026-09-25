@@ -1,0 +1,15 @@
+import { cn } from "@/lib/utils";
+
+export function SquareIcon({ className, ...props }: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="55 662 110 108"
+      fill="currentColor"
+      className={cn("size-4", className)}
+      {...props}
+    >
+  <path d="M150.91,764.48l-80.62.32c-5.27.02-8.96-5.16-8.95-9.89l.18-77.03c.01-6.34,5.21-9.01,10.48-8.99l79.82.38c4.78.02,7.04,6.77,7.02,10.64l-.44,75.13c-.02,3.7-2.33,9.4-7.48,9.42ZM149.42,759.16c1.43,0,3.46-2.21,3.47-3.28l.49-36.43.2-41.15c.01-2.42-3.28-4.27-5.53-4.27l-76.92.13c-2.3,0-4.4,2.59-4.41,4.71l-.27,40.77.5,36.34c.02,1.2,2.81,3.29,4.03,3.29l78.45-.1Z"/>
+    </svg>
+  );
+}
