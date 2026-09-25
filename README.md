@@ -39,11 +39,9 @@ npm run dev
 
 Abre http://localhost:3000.
 
-### Usuarios de prueba (tras el seed)
+### Usuario admin de desarrollo
 
-| Rol | Email | Contraseña |
-|---|---|---|
-| Admin | `admin@skullystore.dev` | `Admin1234!` |
+El seed solo crea un admin si defines `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (mínimo 12 caracteres) en tu `.env`. No hay credenciales por defecto.
 
 Puedes registrar un usuario cliente normal desde `/registro`.
 

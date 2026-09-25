@@ -185,23 +185,36 @@ async function main() {
     }
   }
 
+  // El admin solo se crea si se pasan credenciales por entorno: nunca hay
+  // una contraseña por defecto en el código (el repo es público).
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    console.log(
+      "Seed completado. Admin NO creado: define SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD para crearlo."
+    );
+    return;
+  }
+  if (adminPassword.length < 12) {
+    throw new Error("SEED_ADMIN_PASSWORD debe tener al menos 12 caracteres.");
+  }
+
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: "admin@skullystore.dev" },
+    where: { email: adminEmail },
   });
 
   if (!existingAdmin) {
-    const adminPasswordHash = await bcrypt.hash("Admin1234!", 12);
+    const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
     await prisma.user.create({
       data: {
-        email: "admin@skullystore.dev",
+        email: adminEmail,
         passwordHash: adminPasswordHash,
         name: "Admin",
         role: "ADMIN",
       },
     });
-    console.log(
-      "Seed completado. Admin creado (SOLO DESARROLLO): admin@skullystore.dev / Admin1234!"
-    );
+    console.log(`Seed completado. Admin creado: ${adminEmail}`);
   } else {
     console.log("Seed completado. El admin ya existía, no se ha tocado su contraseña.");
   }
